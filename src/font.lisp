@@ -84,10 +84,12 @@ the rendered row."
              ;; Store metrics
              (setf (gethash c *glyph-index*) i)
              (setf (aref *glyph-metrics* i)
-                   (make-array 6
+                   (make-array 7
                                :initial-contents
                                (list
-                                (truncate cur-x) y glyph-width (ft-bitmap-rows bitmap)
+                                (truncate cur-x) y glyph-width
+                                (ft-bitmap-rows bitmap)
+                                (get-loaded-advance face nil)
                                 (ft-glyphslot-bitmap-left glyph)
                                 (ft-glyphslot-bitmap-top glyph))))
              (loop for d across string

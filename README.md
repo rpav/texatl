@@ -36,10 +36,10 @@ The primary function for generating an atlas is `MAKE-FONT-ATLAS`:
 * `surface`: A cairo *image* surface of the specified size.
 * `face-metrics`: This provides the following 4 metrics which may be
   used for layout:
-    - `ascender`: The max distance from the baseline to the top of any
-      glyph.  This may be used with `x` and `top` to determine the
+    - `max-ascender`: The max distance from the baseline to the top of
+      any glyph.  This may be used with `x` and `top` to determine the
       baseline.
-    - `descender`: The max distance from the baseline to the lowest
+    - `max-descender`: The max distance from the baseline to the lowest
       point of any glyph.  This is expressed as a negative number.
     - `height`: This is the distance *between baselines* font.
       (Generally this is rather small and should be treated as a
@@ -56,16 +56,20 @@ The primary function for generating an atlas is `MAKE-FONT-ATLAS`:
     - `width`, `height`: The width and height of the glyph.  You will
       likely use these as `U,V` and for vertices.  **Not
       baseline-relative.**
+    - `advance`: The number of pixels to move forward to the next
+      glyph, *not* including kerning (which depends on the previous
+      glyph).
     - `left`: The *left* of the glyph, relative to its `x`.  You will
       want to *subtract* this from `x` when placing the glyph.
     - `top`: The *top* of a glyph, relative to its `y`.  You will want
-      to *add* this to `y` when placing the glyph.
+      to *subtract* this from `max-ascender` when placing the glyph.
 * `glyph-kerning`: This is an alist of `((A . B) . K)`, where `A` and
   `B` are characters, and `K` is the kerning value.  When placing
   characters:
-    - Keep a running tally of the character offset, `cx`
+    - Keep a running tally of the character offset, `cx`, incrementing
+      this by `advance + K` after every glyph.
     - You may compute the horizontal position of character `B` by
-      `cx + (x - left) + K`, when `B` follows `A`.
+      `cx + left + K`, when `B` follows `A`.
     - If there is no `(A . B)`, or for the initial character, `K=0`.
     - Note that the kerning for two characters "XY" may differ from
       "YX".
@@ -74,9 +78,10 @@ This may all seem rather complicated, but generally, it is not.
 However, functions will soon be included which will aid in laying out
 text using these metrics.  For now, generally:
 
-* Write out characters using the `cx + (x - left) + K` formula.
-* The vertical position of a glyph should be `y + top`.
+* Write out characters using the `cx + left + K` formula.
+* The vertical position of a glyph should be `max-ascender - top`.
 * For multiple lines, also add `line * (height + some-value)`.
+* You should round values for pixel alignment.
 
 ### make-font-atlas-files
 
