@@ -20,11 +20,22 @@ generate an atlas from those, as well.
 
 [Example output PNG.](http://ogmo.mephle.net/times.png)
 
+## TEXATL vs TEXATL.CL
+
+There are now two different systems and packages:
+
+* `:texatl.cl`, via the system `texatl-client`, is a "client" library,
+  the pure-CL functions and dependencies necessary to render fonts,
+  assuming you have loaded them.
+
+* `:texatl`, via the system `texatl`, has foreign dependencies, but is
+  able to generate textures on the fly.
+
 ## Fonts
 
 ### make-font-atlas
 
-The primary function for generating an atlas is `MAKE-FONT-ATLAS`:
+The primary function for generating an atlas is `TEXATL:MAKE-FONT-ATLAS`:
 
 ```lisp
 (make-font-atlas WIDTH HEIGHT FONT-NAME POINT-SIZE
