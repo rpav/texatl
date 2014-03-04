@@ -108,7 +108,7 @@ The metrics file contains the same values as returned by
 `MAKE-FONT-ATLAS`, written in the CONSPACK format.  You may read these
 in sequence, and obtain the same values in the same format.
 
-## do-texatl-string
+### do-texatl-string
 
 ```lisp
 (do-texatl-string (STRING X0 Y0 X1 Y1 U0 V0 U1 V1
