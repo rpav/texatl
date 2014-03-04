@@ -29,14 +29,14 @@ void main() {
 }
 "))))
 
-(defclass hello-window (gl-window)
+(defclass hello-window-2 (gl-window)
   ((text :initform "(hello world)" :initarg :text)
    (texid :initform nil)
    (programs :initform nil)
    (surface :initform nil)
    (font :initform nil)))
 
-(defmethod initialize-instance ((window hello-window)
+(defmethod initialize-instance ((window hello-window-2)
                                 &key font-file (point-size 18) (dpi 72)
                                 (w 800) (h 600)
                                 &allow-other-keys)
@@ -74,60 +74,24 @@ void main() {
       (gl:tex-image-2d :texture-2d 0 :rgba 128 128
                        0 :bgra :unsigned-byte ptr))))
 
-(defun make-quad (x y w h u0 v0 u1 v1)
+(defun make-quad (x0 y0 x1 y1 u0 v0 u1 v1)
   (gl:with-primitives :quads
-    (gl:tex-coord u0 v0)
-    (gl:vertex x y)
-    (gl:tex-coord u0 v1)
-    (gl:vertex x (+ y h))
-    (gl:tex-coord u1 v1)
-    (gl:vertex (+ x w) (+ y h))
-    (gl:tex-coord u1 v0)
-    (gl:vertex (+ x w) y)))
+    (gl:tex-coord u0 v0) (gl:vertex x0 y0)
+    (gl:tex-coord u0 v1) (gl:vertex x0 y1)
+    (gl:tex-coord u1 v1) (gl:vertex x1 y1)
+    (gl:tex-coord u1 v0) (gl:vertex x1 y0)))
 
-(defmacro with-glyph-metrics ((x y width height advance left top)
-                              glyph-metrics
-                              &body body)
-  (once-only (glyph-metrics)
-    `(let ((,x (aref ,glyph-metrics 0))
-           (,y (aref ,glyph-metrics 1))
-           (,width (aref ,glyph-metrics 2))
-           (,height (aref ,glyph-metrics 3))
-           (,advance (aref ,glyph-metrics 4))
-           (,left (aref ,glyph-metrics 5))
-           (,top (aref ,glyph-metrics 6)))
-       ,@body)))
-
-(defmethod render ((window hello-window))
+(defmethod render ((window hello-window-2))
   (gl:clear-color 0 0 0 1)
   (gl:clear :color-buffer)
   (with-slots (text font) window
-    (with-slots (face-metrics glyph-index glyph-metrics glyph-kerning)
-        font
-      (let ((cx 0.0)
-            (scale (/ 1.0 128))
-            (max-ascender (aref face-metrics 0)))
-        (loop for b = nil then c
-              for c across text
-              as index = (gethash c glyph-index)
-              as met = (aref glyph-metrics index)
-              as kerning = (or (cdr (assoc (cons b c) glyph-kerning
-                                           :test 'equal))
-                               0.0)
-              do (with-glyph-metrics (x y w h adv left top) met
-                   (let* ((u0 (* x scale))
-                          (v0 (* y scale))
-                          (u1 (+ u0 (* w scale)))
-                          (v1 (+ v0 (* h scale))))
-                     (make-quad (round (+ cx left kerning))
-                                (round (- max-ascender top))
-                                w h
-                                u0 v0 u1 v1))
-                   (incf cx (+ adv kerning))))))))
+    (do-texatl-string (text x0 y0 x1 y1 u0 v0 u1 v1
+                       :tex-width 128 :tex-height 128) font
+      (make-quad x0 y0 x1 y1 u0 v0 u1 v1))))
 
-(defmethod keyboard-event ((window hello-window) st ts r ks)
+(defmethod keyboard-event ((window hello-window-2) st ts r ks)
   (when (eq :scancode-escape (sdl2:scancode ks))
     (sdl2.kit:close-window window)))
 
 ;;; (sdl2.kit:start)
-;;; (make-instance 'hello-window :font-file "/usr/share/fonts/corefonts/times.ttf")
+;;; (make-instance 'hello-window-2 :font-file "/usr/share/fonts/corefonts/times.ttf")

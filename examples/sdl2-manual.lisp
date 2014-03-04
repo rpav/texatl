@@ -85,19 +85,6 @@ void main() {
     (gl:tex-coord u1 v0)
     (gl:vertex (+ x w) y)))
 
-(defmacro with-glyph-metrics ((x y width height advance left top)
-                              glyph-metrics
-                              &body body)
-  (once-only (glyph-metrics)
-    `(let ((,x (aref ,glyph-metrics 0))
-           (,y (aref ,glyph-metrics 1))
-           (,width (aref ,glyph-metrics 2))
-           (,height (aref ,glyph-metrics 3))
-           (,advance (aref ,glyph-metrics 4))
-           (,left (aref ,glyph-metrics 5))
-           (,top (aref ,glyph-metrics 6)))
-       ,@body)))
-
 (defmethod render ((window hello-window))
   (gl:clear-color 0 0 0 1)
   (gl:clear :color-buffer)
