@@ -77,14 +77,20 @@ The primary function for generating an atlas is `MAKE-FONT-ATLAS`:
     - Note that the kerning for two characters "XY" may differ from
       "YX".
 
-This may all seem rather complicated, but generally, it is not.
-However, functions will soon be included which will aid in laying out
-text using these metrics.  For now, generally:
+This may all seem rather complicated, but generally, it is not:
 
 * Write out characters using the `cx + left + K` formula.
 * The vertical position of a glyph should be `max-ascender - top`.
 * For multiple lines, also add `line * (height + some-value)`.
 * You should round values for pixel alignment.
+
+See
+[sdl2-manual.lisp](https://github.com/rpav/texatl/blob/master/examples/sdl2-manual.lisp)
+for an example of doing this by hand.  This may be desirable for
+complex font placement situations.
+
+However, you can now use the `DO-TEXATL-STRING` macro to simplify this
+process for simple 2D static string placement.  See below for details.
 
 ### make-font-atlas-files
 
@@ -101,3 +107,18 @@ metrics are not returned, but instead written to these files.
 The metrics file contains the same values as returned by
 `MAKE-FONT-ATLAS`, written in the CONSPACK format.  You may read these
 in sequence, and obtain the same values in the same format.
+
+## do-texatl-string
+
+```lisp
+(do-texatl-string (STRING X0 Y0 X1 Y1 U0 V0 U1 V1
+                   &key (tex-width 1) (tex-height 1)) TEXATL-FONT
+    &body body)
+```
+
+This macro is provided for simplifying the placement of simple 2D
+strings.  It provides no complex layout, line wrapping, etc, but it
+does provide a way to place simple strings without a lot of work.
+See
+[sdl2-simple.lisp](https://github.com/rpav/texatl/blob/master/examples/sdl2-simple.lisp)
+for an example.
