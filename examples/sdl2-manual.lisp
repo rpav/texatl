@@ -3,7 +3,7 @@
   (asdf:load-system "texatl"))
 
 (defpackage :texatl.sdl2.ex
-  (:use #:cl #:alexandria #:sdl2.kit #:texatl))
+  (:use #:cl #:alexandria #:sdl2.kit #:texatl.cl))
 
 (in-package :texatl.sdl2.ex)
 

@@ -9,7 +9,7 @@
   :license "BSD-2-Clause"
   :version "0.0"
 
-  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :cl-conspack :laconic)
+  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :texatl-client)
   :pathname "src"
   :serial t
 

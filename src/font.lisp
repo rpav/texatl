@@ -14,28 +14,6 @@
    (size :initarg :size :accessor ft-user-font-size)
    (dpi :initarg :dpi :accessor ft-user-font-dpi)))
 
-(defclass texatl-font ()
-  ((face-metrics :initform nil :initarg :face-metrics :reader texatl-face-metrics)
-   (glyph-index :initform nil :initarg :glyph-index :reader texatl-glyph-index)
-   (glyph-metrics :initform nil :initarg :glyph-metrics :reader texatl-glyph-metrics)
-   (glyph-kerning :initform nil :initarg :glyph-kerning :reader texatl-glyph-kerning)))
-
-(defmethod conspack:encode-object ((font texatl-font) &key &allow-other-keys)
-  (with-slots (face-metrics glyph-index glyph-metrics glyph-kerning)
-      font
-    (alist :face-metrics face-metrics
-           :glyph-index glyph-index
-           :glyph-metrics glyph-metrics
-           :glyph-kerning glyph-kerning)))
-
-(defmethod conspack:decode-object ((class (eql 'texatl-font)) alist &key &allow-other-keys)
-  (alist-bind (face-metrics glyph-index glyph-metrics glyph-kerning) alist
-    (make-instance 'texatl-font
-      :face-metrics face-metrics
-      :glyph-index glyph-index
-      :glyph-metrics glyph-metrics
-      :glyph-kerning glyph-kerning)))
-
 (defvar *font* nil)
 (defvar *face-metrics* nil)
 
@@ -92,7 +70,10 @@ the rendered row."
   (cairo:glyph-array-reset-fill glyph-array)
   (let ((cur-x 0d0)
         (max-height 0))
-    (with-slots (glyph-index glyph-metrics glyph-kerning) texatl-font
+    (with-slots ((glyph-index texatl.cl:glyph-index)
+                 (glyph-metrics texatl.cl:glyph-metrics)
+                 (glyph-kerning texatl.cl:glyph-kerning))
+        texatl-font
       (loop for c across (subseq string offset)
             for i from offset
             as glyph = (progn (load-char face c)
@@ -134,7 +115,7 @@ the rendered row."
                         :init 'init-user-font
                         :render-glyph 'render-user-glyph))
               (*face-metrics* nil)
-              (texatl-font (make-instance 'texatl-font
+              (texatl-font (make-instance 'texatl.cl:texatl-font
                              :glyph-index (make-hash-table)
                              :glyph-metrics (make-array (length string))))
               (ftm (cairo:make-trans-matrix :xx (coerce point-size 'double-float)
@@ -161,8 +142,8 @@ the rendered row."
 
           (cairo:destroy ctx)
 
-          (with-slots (face-metrics) texatl-font
-            (setf face-metrics *face-metrics*))
+          (with-slots ((fm texatl.cl:face-metrics)) texatl-font
+            (setf fm *face-metrics*))
 
           (values surface texatl-font))))))
 
@@ -178,54 +159,3 @@ the rendered row."
                                              :if-exists :supersede)
       (conspack:encode texatl-font :stream stream)))
   (values))
-
-(defmacro with-glyph-metrics ((x y width height advance left top)
-                              glyph-metrics
-                              &body body)
-  "Bind the metrics for a specific provided glyph metric vector"
-  (once-only (glyph-metrics)
-    `(let ((,x (aref ,glyph-metrics 0))
-           (,y (aref ,glyph-metrics 1))
-           (,width (aref ,glyph-metrics 2))
-           (,height (aref ,glyph-metrics 3))
-           (,advance (aref ,glyph-metrics 4))
-           (,left (aref ,glyph-metrics 5))
-           (,top (aref ,glyph-metrics 6)))
-       ,@body)))
-
-(defmacro do-texatl-string ((string x0 y0 x1 y1 u0 v0 u1 v1
-                             &key (tex-width 1) (tex-height 1))
-                            texatl-font &body body)
-  "Walk `STRING` and provide coordinates for each glyph.  Note that
-these assume an *upper-left origin*.  If `TEX-WIDTH` and `TEX-HEIGHT`
-are not provided, texture coordinates will be returned in
-pixels (scale of 1)."
-  (with-gensyms (cx fm gi gm gk max-ascender b c index met kern
-                 u-scale v-scale x y w h adv left top)
-    (once-only (string tex-width tex-height)
-      `(with-slots ((,fm face-metrics)
-                    (,gi glyph-index)
-                    (,gm glyph-metrics)
-                    (,gk glyph-kerning))
-           ,texatl-font
-         (let ((,cx 0.0)
-               (,u-scale (/ 1.0 ,tex-width))
-               (,v-scale (/ 1.0 ,tex-height))
-               (,max-ascender (aref ,fm 0)))
-           (loop for ,b = nil then ,c
-                 for ,c across ,string
-                 as ,index = (gethash ,c ,gi)
-                 as ,met = (aref ,gm ,index)
-                 as ,kern = (or (aval (cons ,b ,c) ,gk :test 'equal)
-                                0.0)
-                 do (with-glyph-metrics (,x ,y ,w ,h ,adv ,left ,top) ,met
-                      (let* ((,x0 (round (+ ,cx ,left ,kern)))
-                             (,y0 (round (- ,max-ascender ,top)))
-                             (,x1 (+ ,x0 ,w))
-                             (,y1 (+ ,y0 ,h))
-                             (,u0 (* ,x ,u-scale))
-                             (,v0 (* ,y ,v-scale))
-                             (,u1 (+ ,u0 (* ,w ,u-scale)))
-                             (,v1 (+ ,v0 (* ,h ,v-scale))))
-                        ,@body)
-                      (incf ,cx (+ ,adv ,kern)))))))))
