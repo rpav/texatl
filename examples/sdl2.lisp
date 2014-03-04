@@ -3,7 +3,7 @@
   (asdf:load-system "texatl"))
 
 (defpackage :texatl.sdl2.ex
-  (:use #:cl #:alexandria #:sdl2.kit))
+  (:use #:cl #:alexandria #:sdl2.kit #:texatl))
 
 (in-package :texatl.sdl2.ex)
 
@@ -34,10 +34,7 @@ void main() {
    (texid :initform nil)
    (programs :initform nil)
    (surface :initform nil)
-   (face-metrics :initform nil)
-   (glyph-index :initform nil)
-   (glyph-metrics :initform nil)
-   (glyph-kerning :initform nil)))
+   (font :initform nil)))
 
 (defmethod initialize-instance ((window hello-window)
                                 &key font-file (point-size 18) (dpi 72)
@@ -50,17 +47,13 @@ void main() {
   (gl:matrix-mode :modelview)
   (gl:load-identity)
 
-  (with-slots (surface face-metrics glyph-index glyph-metrics glyph-kerning
-               programs texid) window
+  (with-slots (surface programs texid font) window
     ;; Load font:
-    (multiple-value-bind (s fm gi gm gk)
+    (multiple-value-bind (s f)
         (texatl:make-font-atlas 128 128 font-file point-size
                                 :dpi dpi)
       (setf surface s
-            face-metrics fm
-            glyph-index gi
-            glyph-metrics gm
-            glyph-kerning gk))
+            font f))
 
     ;; Build shaders:
     (setf programs (sdl2.kit:compile-shader-dictionary *programs*))
@@ -108,28 +101,29 @@ void main() {
 (defmethod render ((window hello-window))
   (gl:clear-color 0 0 0 1)
   (gl:clear :color-buffer)
-  (with-slots (text face-metrics glyph-index glyph-metrics glyph-kerning)
-      window
-    (let ((cx 0.0)
-          (scale (/ 1.0 128))
-          (max-ascender (aref face-metrics 0)))
-      (loop for b = nil then c
-            for c across text
-            as index = (gethash c glyph-index)
-            as met = (aref glyph-metrics index)
-            as kerning = (or (cdr (assoc (cons b c) glyph-kerning
-                                         :test 'equal))
-                             0.0)
-            do (with-glyph-metrics (x y w h adv left top) met
-                 (let* ((u0 (* x scale))
-                        (v0 (* y scale))
-                        (u1 (+ u0 (* w scale)))
-                        (v1 (+ v0 (* h scale))))
-                   (make-quad (round (+ cx left kerning))
-                              (round (- max-ascender top))
-                              w h
-                              u0 v0 u1 v1))
-                 (incf cx (+ adv kerning)))))))
+  (with-slots (text font) window
+    (with-slots (face-metrics glyph-index glyph-metrics glyph-kerning)
+        font
+      (let ((cx 0.0)
+            (scale (/ 1.0 128))
+            (max-ascender (aref face-metrics 0)))
+        (loop for b = nil then c
+              for c across text
+              as index = (gethash c glyph-index)
+              as met = (aref glyph-metrics index)
+              as kerning = (or (cdr (assoc (cons b c) glyph-kerning
+                                           :test 'equal))
+                               0.0)
+              do (with-glyph-metrics (x y w h adv left top) met
+                   (let* ((u0 (* x scale))
+                          (v0 (* y scale))
+                          (u1 (+ u0 (* w scale)))
+                          (v1 (+ v0 (* h scale))))
+                     (make-quad (round (+ cx left kerning))
+                                (round (- max-ascender top))
+                                w h
+                                u0 v0 u1 v1))
+                   (incf cx (+ adv kerning))))))))
 
 (defmethod keyboard-event ((window hello-window) st ts r ks)
   (when (eq :scancode-escape (sdl2:scancode ks))

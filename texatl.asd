@@ -9,7 +9,7 @@
   :license "BSD-2-Clause"
   :version "0.0"
 
-  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :cl-conspack)
+  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :cl-conspack :laconic)
   :pathname "src"
   :serial t
 

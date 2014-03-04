@@ -30,10 +30,13 @@ The primary function for generating an atlas is `MAKE-FONT-ATLAS`:
 (make-font-atlas WIDTH HEIGHT FONT-NAME POINT-SIZE
                  &key (DPI 72) (STRING *default-characters*))
 
-=> (values SURFACE FACE-METRICS GLYPH-INDEX GLYPH-METRICS GLYPH-KERNING)
+=> (values SURFACE TEXATL-FONT)
 ```
 
-* `surface`: A cairo *image* surface of the specified size.
+`Surface` is a cairo *image* surface of the specified size.
+
+`Texatl-font` is a class with the following slots:
+
 * `face-metrics`: This provides the following 4 metrics which may be
   used for layout:
     - `max-ascender`: The max distance from the baseline to the top of

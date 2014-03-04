@@ -14,11 +14,30 @@
    (size :initarg :size :accessor ft-user-font-size)
    (dpi :initarg :dpi :accessor ft-user-font-dpi)))
 
+(defclass texatl-font ()
+  ((face-metrics :initform nil :initarg :face-metrics :reader texatl-face-metrics)
+   (glyph-index :initform nil :initarg :glyph-index :reader texatl-glyph-index)
+   (glyph-metrics :initform nil :initarg :glyph-metrics :reader texatl-glyph-metrics)
+   (glyph-kerning :initform nil :initarg :glyph-kerning :reader texatl-glyph-kerning)))
+
+(defmethod conspack:encode-object ((font texatl-font) &key &allow-other-keys)
+  (with-slots (face-metrics glyph-index glyph-metrics glyph-kerning)
+      font
+    (alist :face-metrics face-metrics
+           :glyph-index glyph-index
+           :glyph-metrics glyph-metrics
+           :glyph-kerning glyph-kerning)))
+
+(defmethod conspack:decode-object ((class (eql 'texatl-font)) alist &key &allow-other-keys)
+  (alist-bind (face-metrics glyph-index glyph-metrics glyph-kerning) alist
+    (make-instance 'texatl-font
+      :face-metrics face-metrics
+      :glyph-index glyph-index
+      :glyph-metrics glyph-metrics
+      :glyph-kerning glyph-kerning)))
+
 (defvar *font* nil)
 (defvar *face-metrics* nil)
-(defvar *glyph-index* nil)
-(defvar *glyph-metrics* nil)
-(defvar *glyph-kerning* nil)
 
 (defun glyph-index-load-render (face char vertical-p)
   "Return the glyph index instead of a bitmap"
@@ -60,7 +79,7 @@
         (cairo:scale (/ 1.0 scale) (/ 1.0 scale))
         (cairo:mask-surface mask 0 0)))))
 
-(defun render-to-glyph-array (glyph-array string offset width y face)
+(defun render-to-glyph-array (texatl-font glyph-array string offset width y face)
   "=> STRING-OFFSET, MAX-HEIGHT
 
 Populate GLYPH-ARRAY from STRING with maximum width WIDTH.  Note this
@@ -73,34 +92,35 @@ the rendered row."
   (cairo:glyph-array-reset-fill glyph-array)
   (let ((cur-x 0d0)
         (max-height 0))
-    (loop for c across (subseq string offset)
-          for i from offset
-          as glyph = (progn (load-char face c)
-                            (render-glyph face))
-          as bitmap = (bitmap-convert (ft-glyphslot-bitmap glyph) 4)
-          as glyph-width = (ft-bitmap-width bitmap)
-          do (when (> (+ cur-x glyph-width) width)
-               (return (values i max-height)))
-             ;; Store metrics
-             (setf (gethash c *glyph-index*) i)
-             (setf (aref *glyph-metrics* i)
-                   (make-array 7
-                               :initial-contents
-                               (list
-                                (truncate cur-x) y glyph-width
-                                (ft-bitmap-rows bitmap)
-                                (get-loaded-advance face nil)
-                                (ft-glyphslot-bitmap-left glyph)
-                                (ft-glyphslot-bitmap-top glyph))))
-             (loop for d across string
-                   as kern = (get-kerning face c d)
-                   do (unless (= 0.0 kern)
-                        (push (cons (cons c d) kern)
-                              *glyph-kerning*)))
-             ;; Add to array
-             (cairo:glyph-array-add glyph-array (get-char-index face c) cur-x y)
-             (incf cur-x glyph-width)
-             (setf max-height (max max-height (ft-bitmap-rows bitmap))))))
+    (with-slots (glyph-index glyph-metrics glyph-kerning) texatl-font
+      (loop for c across (subseq string offset)
+            for i from offset
+            as glyph = (progn (load-char face c)
+                              (render-glyph face))
+            as bitmap = (bitmap-convert (ft-glyphslot-bitmap glyph) 4)
+            as glyph-width = (ft-bitmap-width bitmap)
+            do (when (> (+ cur-x glyph-width) width)
+                 (return (values i max-height)))
+               ;; Store metrics
+               (setf (gethash c glyph-index) i)
+               (setf (aref glyph-metrics i)
+                     (make-array 7
+                                 :initial-contents
+                                 (list
+                                  (truncate cur-x) y glyph-width
+                                  (ft-bitmap-rows bitmap)
+                                  (get-loaded-advance face nil)
+                                  (ft-glyphslot-bitmap-left glyph)
+                                  (ft-glyphslot-bitmap-top glyph))))
+               (loop for d across string
+                     as kern = (get-kerning face c d)
+                     do (unless (= 0.0 kern)
+                          (push (cons (cons c d) kern)
+                                glyph-kerning)))
+               ;; Add to array
+               (cairo:glyph-array-add glyph-array (get-char-index face c) cur-x y)
+               (incf cur-x glyph-width)
+               (setf max-height (max max-height (ft-bitmap-rows bitmap)))))))
 
 (defun make-font-atlas (width height font-name point-size &key (dpi 72) (string *default-characters*))
   (let* ((surface (cairo:create-image-surface :argb32 width height))
@@ -114,9 +134,9 @@ the rendered row."
                         :init 'init-user-font
                         :render-glyph 'render-user-glyph))
               (*face-metrics* nil)
-              (*glyph-index* (make-hash-table))
-              (*glyph-metrics* (make-array (length string)))
-              (*glyph-kerning* nil)
+              (texatl-font (make-instance 'texatl-font
+                             :glyph-index (make-hash-table)
+                             :glyph-metrics (make-array (length string))))
               (ftm (cairo:make-trans-matrix :xx (coerce point-size 'double-float)
                                             :yy (coerce point-size 'double-float)))
               (ctm (cairo:make-trans-matrix))
@@ -135,30 +155,26 @@ the rendered row."
                   (i 0))
               (loop while i do
                 (multiple-value-setq (i row-height)
-                  (render-to-glyph-array glyph-array string i width y face))
+                  (render-to-glyph-array texatl-font glyph-array string i width y face))
                 (when row-height (incf y row-height))
                 (cairo:show-glyphs glyph-array))))
 
           (cairo:destroy ctx)
 
-          (values surface
-                  *face-metrics*
-                  *glyph-index*
-                  *glyph-metrics*
-                  *glyph-kerning*))))))
+          (with-slots (face-metrics) texatl-font
+            (setf face-metrics *face-metrics*))
+
+          (values surface texatl-font))))))
 
 (defun make-font-atlas-files (png-filename metrics-filename
                               width height font-name point-size
                               &key (dpi 72) (string *default-characters*))
-  (multiple-value-bind (surface face-metrics index metrics kerning)
+  (multiple-value-bind (surface texatl-font)
       (make-font-atlas width height font-name point-size :dpi dpi :string string)
     (cairo:surface-write-to-png surface png-filename)
     (cairo:destroy surface)
     (with-open-file (stream metrics-filename :element-type '(unsigned-byte 8)
                                              :direction :output
                                              :if-exists :supersede)
-      (conspack:encode face-metrics :stream stream)
-      (conspack:encode index :stream stream)
-      (conspack:encode metrics :stream stream)
-      (conspack:encode kerning :stream stream)))
+      (conspack:encode texatl-font :stream stream)))
   (values))
