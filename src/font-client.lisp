@@ -73,3 +73,24 @@ pixels (scale of 1)."
                              (,v1 (+ ,v0 (* ,h ,v-scale))))
                         ,@body)
                       (incf ,cx (+ ,adv ,kern)))))))))
+
+(defun texatl-string-width (string font)
+  "=> PIXEL-WIDTH
+
+Return the width of `STRING` when rendered with `FONT`.  This is the
+width from the placement of the first glyph to the position past the
+final glyph."
+  (with-slots (face-metrics glyph-index glyph-metrics glyph-kerning)
+      font
+    (let ((cx 0.0))
+      (loop for b = nil then c
+            for c across string
+            as index = (gethash c glyph-index)
+            as met = (aref glyph-metrics index)
+            as kerning = (or (cdr (assoc (cons b c) glyph-kerning
+                                         :test 'equal))
+                             0.0)
+            do (with-glyph-metrics (x y w h adv left top) met
+                 (declare (ignore x y w h left top))
+                 (incf cx (+ adv kerning))))
+      cx)))

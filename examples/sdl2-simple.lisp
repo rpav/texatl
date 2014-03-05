@@ -7,17 +7,19 @@
 
 (in-package :texatl.sdl2.ex)
 
-(defparameter *programs*
-  '((:glyph
-     (:uniforms :texid)
-     (:shaders
-      :vertex-shader "
+(defparameter *simple-vertex-shader* "
 varying vec2 texture_coordinate;
 void main() {
     texture_coordinate = vec2(gl_MultiTexCoord0);
     gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
 }
-"
+")
+
+(defparameter *programs*
+  `((:glyph
+     (:uniforms :texid)
+     (:shaders
+      :vertex-shader ,*simple-vertex-shader*
       :fragment-shader "
 #version 120
 
@@ -26,6 +28,18 @@ uniform sampler2D texid;
 
 void main() {
     gl_FragColor = texture2D(texid, texture_coordinate);
+}
+"))
+    (:color
+     (:uniforms :color)
+     (:shaders
+      :vertex-shader ,*simple-vertex-shader*
+      :fragment-shader "
+#version 120
+uniform vec4 color;
+
+void main() {
+    gl_FragColor = color;
 }
 "))))
 
@@ -84,10 +98,18 @@ void main() {
 (defmethod render ((window hello-window-2))
   (gl:clear-color 0 0 0 1)
   (gl:clear :color-buffer)
-  (with-slots (text font) window
+  (with-slots (text font programs) window
+    (sdl2.kit:use-program programs :glyph)
     (do-texatl-string (text x0 y0 x1 y1 u0 v0 u1 v1
                        :tex-width 128 :tex-height 128) font
-      (make-quad x0 y0 x1 y1 u0 v0 u1 v1))))
+      (make-quad x0 y0 x1 y1 u0 v0 u1 v1))
+
+    ;; You could trivially implement word wrapping by splitting a
+    ;; string into words and calculating the width of each:
+    (let ((x (texatl-string-width text font)))
+      (sdl2.kit:use-program programs :color)
+      (sdl2.kit:uniformf programs :color 0.0 0.0 1.0 1.0)
+      (make-quad x 0 (+ x 2) 20 0 0 1 1))))
 
 (defmethod keyboard-event ((window hello-window-2) st ts r ks)
   (when (eq :scancode-escape (sdl2:scancode ks))
