@@ -1,11 +1,13 @@
 # texatl
 
-This is a simple texture atlas generator.  Currently, it only
-generates an atlas and font metrics for a font using
-[cl-freetype2](https://github.com/rpav/cl-freetype2) and
-[cl-cairo2](https://github.com/rpav/cl-cairo2).  Shortly, it will
-import an arbitrary set of PNG images (and possibly other formats) and
-generate an atlas from those, as well.
+This is a simple texture atlas generator.  It will generate atlases
+for the following:
+
+* Fonts, including font metrics, using
+  [cl-freetype2](https://github.com/rpav/cl-freetype2) and
+  [cl-cairo2](https://github.com/rpav/cl-cairo2)
+* Sprites, including metrics (texture position and frames) and sprite
+  names, from PNG files.
 
 ```lisp
 ;; This will produce a 128x128 png file with a rendition of the
@@ -19,6 +21,16 @@ generate an atlas from those, as well.
 ```
 
 [Example output PNG.](http://ogmo.mephle.net/times.png)
+
+```lisp
+;; This will produce a 96x96 png file as seen below.
+
+(make-sprite-atlas-files "sprites.png" "sprites.met" 96 96
+                         (directory "*.png"))
+```
+
+[Example output PNG](http://ogmo.mephle.net/sprites.png), generated
+for an upcoming game using [cl-sdl2](https://github.com/lispgames/cl-sdl2).
 
 ## TEXATL vs TEXATL.CL
 
@@ -133,3 +145,70 @@ does provide a way to place simple strings without a lot of work.
 See
 [sdl2-simple.lisp](https://github.com/rpav/texatl/blob/master/examples/sdl2-simple.lisp)
 for an example.
+
+## Sprites
+
+Sprites are much simpler, though they have similar functions:
+
+```lisp
+(make-sprite-atlas WIDTH HEIGHT FILE-LIST)
+
+=> (values SURFACE TEXATL-SPRITESHEET)
+```
+
+`Surface` is a cairo *image* surface of the specified size.
+
+`Texatl-spritesheet` is a class which you can access with the
+following functions:
+
+```lisp
+(sprite SPRITESHEET NAME FRAME)
+
+=> #(X0 Y0 X1 Y1)
+```
+
+This returns the texture coordinates (in *pixels*) for the sprite
+named `NAME`, for frame `FRAME`.  See *Sprite Naming* below for
+details on how sprite names work.
+
+Additionally, you can find how many frames a given sprite has:
+
+```lisp
+(frame-count SPRITESHEET NAME)
+
+=> frame-count
+```
+
+### make-sprite-altas-files
+
+Much like `MAKE-FONT-ATLAS-FILES`, this will write a PNG file and a
+CONSPACK file containing the metrics for you:
+
+```lisp
+(make-sprite-atlas-files PNG-FILENAME METRICS-FILENAME WIDTH HEIGHT FILES)
+```
+
+### Sprite Naming
+
+Sprites have names which are a *list of keywords*.  For instance, you
+may have a sprite named `(:HERO :FRONT :SHOOTING)`.  In the example
+spritesheet at the top, sprites have names like `(:WIZ :SIDE :WALK)`
+or `(:KNIGHT :FRONT :STAB)`.
+
+Sprites also have one or more *frames*, and given a *name* and a
+*frame*, you can retrieve the specific texture coordinates with
+`TEXATL.CL:SPRITE`.
+
+Sprite *filenames* are important, because they determine sprite names
+and frames.  For instance:
+
+* `wiz:side:walk:1.png` => `(:WIZ :SIDE :WALK)` frame 1
+* `knight:front:stab:0.png` => `(:KNIGHT :FRONT :STAB)` frame 0
+
+Note that frames are numbered from *zero*.  Sprite name components are
+separated by *colons*, and the frame is specified as a single integer
+at the end.
+
+In practice, it is relatively easy to create a sprite using a number
+of named layers in, e.g., GIMP, and export each layer based on its
+name using a script.  That was done in the above example.

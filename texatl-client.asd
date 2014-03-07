@@ -15,4 +15,5 @@
 
   :components
   ((:file "package-client")
-   (:file "font-client")))
+   (:file "font-client")
+   (:file "sprite-client")))

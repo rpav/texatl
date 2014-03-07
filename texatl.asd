@@ -9,10 +9,13 @@
   :license "BSD-2-Clause"
   :version "0.0"
 
-  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :texatl-client)
+  :depends-on (:alexandria :cl-freetype2 :cl-cairo2 :texatl-client
+               :cl-ppcre)
   :pathname "src"
   :serial t
 
   :components
   ((:file "package")
-   (:file "font")))
+   (:file "util")
+   (:file "font")
+   (:file "sprite")))

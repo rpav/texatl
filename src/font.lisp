@@ -104,48 +104,44 @@ the rendered row."
                (setf max-height (max max-height (ft-bitmap-rows bitmap)))))))
 
 (defun make-font-atlas (width height font-name point-size &key (dpi 72) (string *default-characters*))
-  (let* ((surface (cairo:create-image-surface :argb32 width height))
-         (ctx (cairo:create-context surface)))
-    (cairo:with-context (ctx)
-      (let ((face (ft2:new-face font-name)))
-        (let ((*font* (make-instance 'ft-user-font
-                        :ft-face face
-                        :size point-size
-                        :dpi dpi
-                        :init 'init-user-font
-                        :render-glyph 'render-user-glyph))
-              (*face-metrics* nil)
-              (texatl-font (make-instance 'texatl.cl:texatl-font
-                             :glyph-index (make-hash-table)
-                             :glyph-metrics (make-array (length string))))
-              (ftm (cairo:make-trans-matrix :xx (coerce point-size 'double-float)
-                                            :yy (coerce point-size 'double-float)))
-              (ctm (cairo:make-trans-matrix))
-              (opt (cairo:create-font-options))
-              (glyph-array (cairo:make-glyph-array (length string))))
-          (let ((scaled-font (cairo:create-scaled-font *font* ftm ctm opt)))
-            (cairo:set-source-rgb 0 0 0)
-            (cairo:paint)
+  (with-atlas-surface (surface width height)
+    (let ((face (ft2:new-face font-name)))
+      (let ((*font* (make-instance 'ft-user-font
+                      :ft-face face
+                      :size point-size
+                      :dpi dpi
+                      :init 'init-user-font
+                      :render-glyph 'render-user-glyph))
+            (*face-metrics* nil)
+            (texatl-font (make-instance 'texatl.cl:texatl-font
+                           :glyph-index (make-hash-table)
+                           :glyph-metrics (make-array (length string))))
+            (ftm (cairo:make-trans-matrix :xx (coerce point-size 'double-float)
+                                          :yy (coerce point-size 'double-float)))
+            (ctm (cairo:make-trans-matrix))
+            (opt (cairo:create-font-options))
+            (glyph-array (cairo:make-glyph-array (length string))))
+        (let ((scaled-font (cairo:create-scaled-font *font* ftm ctm opt)))
+          (cairo:set-source-rgb 0 0 0)
+          (cairo:paint)
 
-            (cairo:set-source-rgb 1 1 1)
-            (ft2:set-char-size face (* point-size 64) 0 dpi dpi)
-            (cairo:set-font scaled-font)
+          (cairo:set-source-rgb 1 1 1)
+          (ft2:set-char-size face (* point-size 64) 0 dpi dpi)
+          (cairo:set-font scaled-font)
 
-            (let ((row-height 0)
-                  (y 0)
-                  (i 0))
-              (loop while i do
-                (multiple-value-setq (i row-height)
-                  (render-to-glyph-array texatl-font glyph-array string i width y face))
-                (when row-height (incf y row-height))
-                (cairo:show-glyphs glyph-array))))
+          (let ((row-height 0)
+                (y 0)
+                (i 0))
+            (loop while i do
+              (multiple-value-setq (i row-height)
+                (render-to-glyph-array texatl-font glyph-array string i width y face))
+              (when row-height (incf y row-height))
+              (cairo:show-glyphs glyph-array))))
 
-          (cairo:destroy ctx)
+        (with-slots ((fm texatl.cl:face-metrics)) texatl-font
+          (setf fm *face-metrics*))
 
-          (with-slots ((fm texatl.cl:face-metrics)) texatl-font
-            (setf fm *face-metrics*))
-
-          (values surface texatl-font))))))
+        (values surface texatl-font)))))
 
 (defun make-font-atlas-files (png-filename metrics-filename
                               width height font-name point-size
