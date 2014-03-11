@@ -171,6 +171,16 @@ This returns the texture coordinates (in *pixels*) for the sprite
 named `NAME`, for frame `FRAME`.  See *Sprite Naming* below for
 details on how sprite names work.
 
+For easy binding, there is `WITH-SPRITE`:
+
+```lisp
+(with-sprite (x0 y0 x1 y1) NAME FRAME SPRITESHEET
+  &body)
+```
+
+This binds the specified variables to texture coordinates, given
+`NAME`, `FRAME`, and `SPRITESHEET` (all evaluated).
+
 Additionally, you can find how many frames a given sprite has:
 
 ```lisp
