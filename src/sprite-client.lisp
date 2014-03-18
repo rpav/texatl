@@ -21,12 +21,16 @@
 
 (defmacro with-sprite ((x0 y0 x1 y1) name frame sprite-sheet &body body)
   (with-gensyms (metrics)
-   `(let ((,metrics (sprite ,sprite-sheet ,name ,frame)))
-      (let ((,x0 (aref ,metrics 0))
-            (,y0 (aref ,metrics 1))
-            (,x1 (aref ,metrics 2))
-            (,y1 (aref ,metrics 3)))
-        ,@body))))
+    (once-only (name frame sprite-sheet)
+      `(let ((,metrics (sprite ,sprite-sheet ,name ,frame)))
+         (if (null ,metrics)
+             (error "Sprite ~A frame ~A not found in ~A"
+                    ,name ,frame ,sprite-sheet)
+             (let ((,x0 (aref ,metrics 0))
+                   (,y0 (aref ,metrics 1))
+                   (,x1 (aref ,metrics 2))
+                   (,y1 (aref ,metrics 3)))
+               ,@body))))))
 
 (defun frame-count (spritesheet name)
   "Return the number of frames for sprite named `NAME` in spritesheet."

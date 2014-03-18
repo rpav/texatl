@@ -59,11 +59,12 @@
                                 file-list)
   (multiple-value-bind (surface metrics)
       (make-sprite-atlas width height file-list)
-    (cairo:surface-write-to-png surface png-filename)
+    (cairo:surface-write-to-png surface (namestring (merge-pathnames png-filename)))
     (cairo:destroy surface)
-    (with-open-file (stream metrics-filename :direction :output
-                                             :if-exists :supersede
-                                             :element-type '(unsigned-byte 8))
+    (with-open-file (stream (merge-pathnames metrics-filename)
+                            :direction :output
+                            :if-exists :supersede
+                            :element-type '(unsigned-byte 8))
       (conspack:encode metrics :stream stream)))
   (values))
 
