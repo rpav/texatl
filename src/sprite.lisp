@@ -39,7 +39,9 @@
           (tallest 0.0)
           (metrics (make-instance 'texatl.cl:texatl-spritesheet)))
       (loop for filename in file-list
-            for sprite = (cairo:image-surface-create-from-png (namestring filename))
+            for sprite = (cairo:image-surface-create-from-png
+                          #-ccl(namestring filename)
+                          #+ccl(ccl:native-translated-namestring (namestring filename)))
             as w = (cairo:width sprite)
             as h = (cairo:height sprite)
             do (multiple-value-bind (sprite-id frame)
