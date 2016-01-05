@@ -148,7 +148,7 @@ the rendered row."
                               &key (dpi 72) (string *default-characters*))
   (multiple-value-bind (surface texatl-font)
       (make-font-atlas width height font-name point-size :dpi dpi :string string)
-    (cairo:surface-write-to-png surface png-filename)
+    (cairo:surface-write-to-png surface (namestring (merge-pathnames png-filename)))
     (cairo:destroy surface)
     (with-open-file (stream metrics-filename :element-type '(unsigned-byte 8)
                                              :direction :output
