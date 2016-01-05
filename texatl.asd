@@ -18,4 +18,5 @@
   ((:file "package")
    (:file "util")
    (:file "font")
-   (:file "sprite")))
+   (:file "sprite")
+   (:file "placeholder")))

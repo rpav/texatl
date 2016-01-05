@@ -9,4 +9,5 @@
    #:with-glyph-metrics #:do-texatl-string #:texatl-string-width
 
    ;; sprite
-   #:texatl-spritesheet #:sprite #:frame-count #:with-sprite))
+   #:texatl-spritesheet #:sprite #:frame-count #:with-sprite
+   #:mapsheet))

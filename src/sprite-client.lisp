@@ -36,3 +36,17 @@
   "Return the number of frames for sprite named `NAME` in spritesheet."
   (with-slots (metrics) spritesheet
     (length (gethash name metrics))))
+
+(defmacro mapsheet (function-designator spritesheet)
+  "Iterate over `SPRITESHEET` and pass `NAME`, `FRAME`, and a vector
+of coordinates to `FUNCTION-DESIGNATOR`.  That is, iterate over every
+frame in every sprite, passing its metrics."
+  (once-only (function-designator)
+    (with-gensyms (metrics k v vec i)
+      `(with-slots ((,metrics metrics)) ,spritesheet
+         (maphash
+          (lambda (,k ,v)
+            (loop for ,vec across ,v
+                  for ,i from 0
+                  do (funcall ,function-designator ,k ,i ,vec)))
+          ,metrics)))))

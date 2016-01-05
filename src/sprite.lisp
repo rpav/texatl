@@ -65,6 +65,26 @@
                             :direction :output
                             :if-exists :supersede
                             :element-type '(unsigned-byte 8))
-      (conspack:encode metrics :stream stream)))
+      (cpk:with-properties ()
+        (conspack:encode metrics :stream stream))))
   (values))
 
+(defun split-sprite-atlas-file (png-filename metrics-filename)
+  (let ((sheet (car (conspack:decode-file metrics-filename)))
+        (source (cairo:image-surface-create-from-png (namestring png-filename))))
+    (texatl.cl:mapsheet
+     (lambda (n f v)
+       (let* ((x (truncate (aref v 0)))
+              (y (truncate (aref v 1)))
+              (w (truncate (- (aref v 2) x)))
+              (h (truncate (- (aref v 3) y)))
+              (spr (cairo:create-image-surface (cairo:image-surface-get-format source) w h)))
+         (cairo:with-context-from-surface (spr)
+           (cairo:set-source-surface source (- x) (- y))
+           (cairo:paint)
+           (cairo:surface-write-to-png spr (string+ (string-downcase (string-join n ":"))
+                                                    ":" (format nil "~D" f)
+                                                    ".png"))
+           (cairo:destroy spr))))
+     sheet)
+    (cairo:destroy source)))
